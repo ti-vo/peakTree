@@ -21,7 +21,7 @@ from . import print_tree
 from . import generate_tree
 import toml
 import scipy
-from loess.loess_1d import loess_1d
+#from loess.loess_1d import loess_1d
 
 log = logging.getLogger(__name__)
 # log.setLevel(logging.DEBUG)
@@ -1596,7 +1596,7 @@ class peakTreeBuffer():
             #ind_chirp = np.searchsorted(self.chirp_start_indices, ir, side='right')-1
             log.debug(f'current chirp [zero-based index] {ind_chirp}')
             vel_chirp = self.velocity[:, ind_chirp]
-            vel_step = vel_chirp[~vel_chirp.mask][1] - vel_chirp[~vel_chirp.mask][0]
+            vel_step = vel_chirp[1] - vel_chirp[0]
             if roll_velocity or ('roll_velocity' in peak_finding_params and peak_finding_params['roll_velocity']):
                 if 'roll_velocity' in peak_finding_params and peak_finding_params['roll_velocity']:
                     roll_velocity = peak_finding_params['roll_velocity']
