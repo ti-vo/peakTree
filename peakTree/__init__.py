@@ -60,7 +60,8 @@ def check_part_not_reproduced(tree, spectrum):
     leave_ids = list(set(tree.keys()) - set(parents))
     spec_from_mom = np.zeros(spectrum['specZ'].shape)
     vel, vel_mask = h.masked_to_plain(spectrum['vel'])
-    delta_v = vel[~vel_mask][2] - vel[~vel_mask][1]
+    delta_v = vel[vel != 0][1] - vel[vel != 0][0]
+
     
     for i in leave_ids:
         if tree[i]['width'] < 0.001:
@@ -71,7 +72,7 @@ def check_part_not_reproduced(tree, spectrum):
         step = int(7*tree[i]['width']/delta_v)
         ista, iend = ivmean - step, ivmean + step
         spec_from_mom[ista:iend] += S * h.gauss_func(spectrum['vel'][ista:iend], tree[i]['v'], tree[i]['width'])
-        
+
     spec_from_mom[spec_from_mom < spectrum['noise_thres']] = spectrum['noise_thres']
     difference = spectrum['specZ']/spec_from_mom
    
@@ -525,10 +526,10 @@ class peakTreeBuffer():
             if self.settings['polarimetry'] == 'STSR':
                 # possibly missing scaling factor here:
                 if 'TotNoisePow' in data:
-                    self.noise_v = data['TotNoisePow'] 
+                    self.noise_v = data['TotNoisePow']
                 else:
                     self.noise_v = h.estimate_noise_array(self.spec_tot)
-                self.noise_v /= np.repeat(self.doppFFT, bins_per_chirp) 
+                self.noise_v /= np.repeat(self.doppFFT, bins_per_chirp)
                 self.noise_h = data['HNoisePow']/np.repeat(self.doppFFT, bins_per_chirp)
 
                 self.spec_h = data['HSpec']
@@ -560,10 +561,10 @@ class peakTreeBuffer():
                     self.noise_v = data['TotNoisePow'] 
                 else:
                     self.noise_v = h.estimate_noise_array(self.spec_tot)
+                self.noise_thres_2d = self.Q*self.noise_v/np.sqrt(self.no_avg_subs_2d)
                 self.specZ_2d = self.spec_tot
                 self.specZ_2d_mask = (self.specZ_2d <= 1e-10)
                 # here another option for polarimetry = 'LDR' needs to be added
-
         else:
             raise ValueError('load_to_ram = False not implemented yet')
 
@@ -1668,7 +1669,6 @@ class peakTreeBuffer():
                     noise_cx_thres = peak_finding_params['thres_factor_cx'] * np.average(self.noise_thres_2d[it_slicer, ir_slicer], axis=(0,1))
                 else:
                     noise_cx_thres =  np.average(self.noise_thres_2d[it_slicer, ir_slicer], axis=(0,1))
-                
                 specZcx_mask = (specZcx <= 1e-10) | ~np.isfinite(specZcx) | (specZcx < noise_cx_thres)
                 log.info(f"noise cx thres {h.lin2z(noise_cx_thres)} {np.all(specZcx_mask)}")
                 trust_ldr_mask = specZcx_mask | specZ_mask
@@ -1700,6 +1700,7 @@ class peakTreeBuffer():
                     'decoupling': self.settings['decoupling'],
                 }
             elif self.settings['polarimetry'] == 'false':
+                noise_mean = np.average(self.noise_v[it_slicer, ir_slicer], axis=(0, 1))
                 specSNRco = specZ/noise_mean
                 specSNRco_mask = specZ_mask.copy()
                 assert np.isfinite(noise_thres), "noise threshold is not a finite number"
